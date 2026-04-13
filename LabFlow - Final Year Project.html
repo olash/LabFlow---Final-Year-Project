@@ -1,0 +1,430 @@
+<html lang="en" class="h-full antialiased bg-gray-50"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabFlow System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for subtle look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+    </style>
+</head>
+<body class="h-full text-slate-900 selection:bg-violet-100 selection:text-violet-900">
+
+    <!-- App Container -->
+    <div id="app" class="h-full flex w-full">
+
+        <!-- ========================================== -->
+        <!-- PAGE 1: LOGIN                              -->
+        <!-- ========================================== -->
+        <div id="page-login" class="page-view flex min-h-screen w-full">
+            <!-- Left: Form -->
+            <div class="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:w-1/2 lg:px-20 xl:px-24 bg-white">
+                <div class="mx-auto w-full max-w-sm lg:w-96">
+                    <div class="flex items-center gap-2 mb-8">
+                        <div class="flex h-8 w-8 items-center justify-center rounded bg-violet-600 text-white font-semibold tracking-tighter text-sm">LF</div>
+                        <span class="font-medium text-slate-900 tracking-tight text-lg">LabFlow</span>
+                    </div>
+
+                    <h2 class="text-2xl font-semibold leading-9 tracking-tight text-slate-900">Sign in to your account</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">Access the digital assessment portal.</p>
+
+                    <div class="mt-10">
+                        <form action="#" class="space-y-6" onsubmit="event.preventDefault(); document.getElementById('student-tab').classList.contains('bg-white') ? navigate('page-student') : navigate('page-lecturer');">
+                            
+                            <!-- Role Toggle -->
+                            <div class="flex rounded-lg bg-gray-100 p-1 text-sm font-medium">
+                                <button type="button" id="student-tab" onclick="setRole('student')" class="flex-1 rounded-md bg-white py-2 shadow-sm text-slate-900 ring-1 ring-black/5 transition-all">Student</button>
+                                <button type="button" id="lecturer-tab" onclick="setRole('lecturer')" class="flex-1 rounded-md py-2 text-slate-500 hover:text-slate-900 transition-all">Lecturer</button>
+                            </div>
+
+                            <div>
+                                <label for="userId" class="block text-sm font-medium leading-6 text-slate-900" id="userIdLabel">Matriculation Number</label>
+                                <div class="mt-2">
+                                    <input id="userId" name="userId" type="text" required="" class="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-violet-600 sm:text-sm sm:leading-6 transition-all outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="password" class="block text-sm font-medium leading-6 text-slate-900">Password</label>
+                                <div class="mt-2">
+                                    <input id="password" name="password" type="password" required="" class="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-violet-600 sm:text-sm sm:leading-6 transition-all outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="submit" class="flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all">Sign in</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Pattern -->
+            <div class="relative hidden w-0 flex-1 lg:block bg-slate-900 overflow-hidden">
+                <!-- Abstract Glows -->
+                <div class="absolute -top-24 -left-24 w-96 h-96 bg-violet-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                <div class="absolute bottom-10 right-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                
+                <!-- Grid Pattern -->
+                <svg class="absolute inset-0 h-full w-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M0 40L40 0H20L0 20M40 40V20L20 40" stroke="currentColor" stroke-width="1" fill="none"></path>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid-pattern)" class="text-white"></rect>
+                </svg>
+
+                <div class="absolute inset-0 flex items-center justify-center flex-col text-center px-12">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 text-white font-semibold tracking-tighter text-2xl mb-6">LF</div>
+                    <h1 class="text-3xl font-semibold tracking-tight text-white mb-2">Digital Assessment Portal</h1>
+                    <p class="text-slate-400 text-lg max-w-md">Streamlined lab report submission and grading for engineering faculties.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SHARED LAYOUT SHELL (Sidebar & Header)     -->
+        <!-- ========================================== -->
+        <div id="app-layout" class="hidden flex h-full w-full">
+            <!-- Sidebar -->
+            <div class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:border-r lg:border-gray-200 lg:bg-white lg:pt-5 lg:pb-4">
+                <div class="flex items-center flex-shrink-0 px-6 gap-2 mb-8">
+                    <div class="flex h-7 w-7 items-center justify-center rounded bg-violet-600 text-white font-semibold tracking-tighter text-xs">LF</div>
+                    <span class="font-medium text-slate-900 tracking-tight text-base">LabFlow</span>
+                </div>
+                <nav class="mt-4 flex-1 px-3 space-y-1" id="sidebar-nav">
+                    <!-- Nav items injected by JS -->
+                </nav>
+                <div class="px-4 mt-auto">
+                    <button onclick="navigate('page-login')" class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-gray-50 hover:text-slate-900 transition-colors">
+                        <iconify-icon icon="solar:logout-2-linear" stroke-width="1.5" class="text-lg"></iconify-icon>
+                        Log out
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content Wrapper -->
+            <div class="lg:pl-64 flex flex-col flex-1 h-full">
+                <!-- Header -->
+                <div class="sticky top-0 z-10 flex h-16 flex-shrink-0 border-b border-gray-200 bg-white/80 backdrop-blur-md">
+                    <div class="flex flex-1 justify-between px-4 sm:px-6 lg:px-8">
+                        <div class="flex flex-1 items-center">
+                            <h1 class="text-lg font-medium text-slate-900 tracking-tight" id="header-greeting">Welcome back</h1>
+                        </div>
+                        <div class="ml-4 flex items-center md:ml-6 gap-4">
+                            <button type="button" class="relative rounded-full bg-white p-1 text-slate-400 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transition-colors">
+                                <span class="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                                <iconify-icon icon="solar:bell-linear" stroke-width="1.5" class="text-xl"></iconify-icon>
+                            </button>
+                            <div class="h-8 w-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
+                                <iconify-icon icon="solar:user-rounded-linear" stroke-width="1.5" class="text-gray-500"></iconify-icon>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scrollable Content Area -->
+                <main class="flex-1 pb-8">
+                    
+                    <!-- ========================================== -->
+                    <!-- PAGE 2: STUDENT DASHBOARD                  -->
+                    <!-- ========================================== -->
+                    <div id="page-student" class="page-view hidden p-4 sm:p-6 lg:p-8 space-y-8 max-w-5xl mx-auto">
+                        
+                        <!-- Upload Section -->
+                        <section>
+                            <h2 class="text-base font-medium text-slate-900 mb-4">Submit New Report</h2>
+                            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <div class="max-w-md mb-6">
+                                    <label for="course" class="block text-sm font-medium leading-6 text-slate-900">Select Course</label>
+                                    <div class="mt-2 relative">
+                                        <select id="course" name="course" class="block w-full appearance-none rounded-md border-0 py-2 pl-3 pr-10 text-slate-900 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6 bg-white outline-none">
+                                            <option>EEG 401: Control Engineering Lab</option>
+                                            <option>EEG 403: Power Systems Lab</option>
+                                            <option>MEG 312: Fluid Mechanics</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-gray-400"></iconify-icon>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-12 hover:border-violet-400 hover:bg-violet-50/50 transition-colors cursor-pointer group">
+                                    <div class="text-center">
+                                        <iconify-icon icon="solar:document-add-linear" stroke-width="1.5" class="mx-auto text-4xl text-gray-300 group-hover:text-violet-500 transition-colors"></iconify-icon>
+                                        <div class="mt-4 flex text-sm leading-6 text-gray-600 justify-center">
+                                            <span class="relative rounded-md font-medium text-violet-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-violet-600 focus-within:ring-offset-2 hover:text-violet-500">
+                                                <span>Upload a file</span>
+                                            </span>
+                                            <p class="pl-1">or drag and drop</p>
+                                        </div>
+                                        <p class="text-xs leading-5 text-gray-500 mt-1">PDF up to 10MB</p>
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex justify-end">
+                                    <button class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-500 transition-all opacity-50 cursor-not-allowed">Submit Report</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Recent Submissions -->
+                        <section>
+                            <h2 class="text-base font-medium text-slate-900 mb-4">Recent Submissions</h2>
+                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+                                    <thead class="bg-gray-50/50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Course</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">File</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Date Submitted</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Status</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500 text-right">Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">EEG 401</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
+                                                <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500"></iconify-icon>
+                                                Lab_1_PID.pdf
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Oct 24, 2023 • 14:30</td>
+                                            <td class="whitespace-nowrap px-6 py-4">
+                                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending Evaluation</span>
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-right text-slate-400">-</td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">MEG 312</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
+                                                <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500"></iconify-icon>
+                                                Bernoulli_Exp.pdf
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Oct 12, 2023 • 09:15</td>
+                                            <td class="whitespace-nowrap px-6 py-4">
+                                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Graded</span>
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-slate-900">85 / 100</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- PAGE 3: LECTURER DASHBOARD                 -->
+                    <!-- ========================================== -->
+                    <div id="page-lecturer" class="page-view hidden p-4 sm:p-6 lg:p-8 space-y-8 max-w-6xl mx-auto">
+                        
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <dt class="truncate text-sm font-medium text-slate-500">Total Submissions</dt>
+                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">142</dd>
+                            </div>
+                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <dt class="truncate text-sm font-medium text-slate-500">Ungraded</dt>
+                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-amber-600">34</dd>
+                            </div>
+                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <dt class="truncate text-sm font-medium text-slate-500">Graded</dt>
+                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-emerald-600">108</dd>
+                            </div>
+                        </div>
+
+                        <!-- Submissions Table -->
+                        <section>
+                            <div class="sm:flex sm:items-center sm:justify-between mb-4">
+                                <h2 class="text-base font-medium text-slate-900">Pending Submissions</h2>
+                                <div class="mt-3 sm:ml-4 sm:mt-0 flex gap-2">
+                                    <div class="relative">
+                                        <select class="block w-full appearance-none rounded-md border border-gray-200 py-1.5 pl-3 pr-8 text-sm text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 bg-white shadow-sm">
+                                            <option>All Courses</option>
+                                            <option>EEG 401</option>
+                                            <option>EEG 403</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                            <iconify-icon icon="solar:alt-arrow-down-linear" class="text-gray-400 text-xs"></iconify-icon>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+                                    <thead class="bg-gray-50/50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Student ID</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Course Code</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Submission Time</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Status</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <tr class="hover:bg-gray-50/50 transition-colors bg-violet-50/30"> <!-- Active row simulation -->
+                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">190403012</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">EEG 401</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Today • 10:23 AM</td>
+                                            <td class="whitespace-nowrap px-6 py-4">
+                                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-right">
+                                                <button class="text-violet-600 hover:text-violet-900 font-medium text-sm">Grading...</button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">190403045</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">EEG 401</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Today • 09:15 AM</td>
+                                            <td class="whitespace-nowrap px-6 py-4">
+                                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
+                                            </td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-right">
+                                                <button class="text-slate-500 hover:text-slate-900 font-medium text-sm">Review &amp; Grade</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <!-- Grading Panel Mockup (Appears when row clicked) -->
+                        <section class="mt-8 pt-8 border-t border-gray-200">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-base font-medium text-slate-900">Evaluation: <span class="font-normal text-slate-500">190403012 - EEG 401</span></h2>
+                                <button class="p-1 text-gray-400 hover:text-gray-600"><iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon></button>
+                            </div>
+                            
+                            <div class="flex flex-col lg:flex-row gap-6 h-[500px]">
+                                <!-- Left: PDF Viewer Placeholder -->
+                                <div class="flex-1 rounded-xl border border-gray-200 bg-gray-100/50 flex flex-col items-center justify-center text-slate-400 relative overflow-hidden">
+                                    <!-- Fake PDF header -->
+                                    <div class="absolute top-0 w-full h-10 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
+                                        <div class="text-xs text-slate-500 flex items-center gap-2"><iconify-icon icon="solar:document-text-linear"></iconify-icon> Lab_Report_PID_Control.pdf</div>
+                                        <div class="flex gap-2">
+                                            <button class="p-1 hover:bg-gray-100 rounded text-slate-500"><iconify-icon icon="solar:magnifer-zoom-in-linear"></iconify-icon></button>
+                                            <button class="p-1 hover:bg-gray-100 rounded text-slate-500"><iconify-icon icon="solar:magnifer-zoom-out-linear"></iconify-icon></button>
+                                        </div>
+                                    </div>
+                                    <iconify-icon icon="solar:file-text-linear" stroke-width="1" class="text-6xl mb-4 text-gray-300"></iconify-icon>
+                                    <p class="text-sm font-medium">PDF Document Viewer</p>
+                                    <p class="text-xs mt-1">Scroll to review content</p>
+                                </div>
+
+                                <!-- Right: Grading Form -->
+                                <div class="w-full lg:w-80 flex flex-col gap-6">
+                                    <div>
+                                        <label for="score" class="block text-sm font-medium leading-6 text-slate-900">Numerical Score (Out of 100)</label>
+                                        <div class="mt-2 relative">
+                                            <input type="number" id="score" class="block w-full rounded-md border-0 py-3 px-4 text-2xl font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-300 focus:ring-2 focus:ring-inset focus:ring-violet-600 text-center outline-none transition-all" placeholder="0">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-1 flex flex-col">
+                                        <label for="feedback" class="block text-sm font-medium leading-6 text-slate-900">Constructive Feedback</label>
+                                        <div class="mt-2 flex-1">
+                                            <textarea id="feedback" rows="8" class="block w-full h-full resize-none rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-violet-600 sm:text-sm sm:leading-6 outline-none transition-all" placeholder="Enter comments regarding methodology, data analysis, and conclusion..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-2">
+                                        <button class="flex w-full justify-center items-center gap-2 rounded-md bg-violet-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all">
+                                            <iconify-icon icon="solar:check-circle-linear" class="text-lg"></iconify-icon>
+                                            Save &amp; Mark Graded
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation & Logic Script -->
+    <script>
+        // Data for sidebars
+        const navData = {
+            student: [
+                { icon: 'solar:widget-linear', label: 'Dashboard', active: true },
+                { icon: 'solar:book-bookmark-linear', label: 'My Courses', active: false },
+                { icon: 'solar:settings-linear', label: 'Settings', active: false }
+            ],
+            lecturer: [
+                { icon: 'solar:widget-linear', label: 'Overview', active: true },
+                { icon: 'solar:folder-with-files-linear', label: 'Assessments', active: false },
+                { icon: 'solar:users-group-rounded-linear', label: 'Students', active: false },
+                { icon: 'solar:settings-linear', label: 'Settings', active: false }
+            ]
+        };
+
+        function renderSidebar(role) {
+            const navContainer = document.getElementById('sidebar-nav');
+            const items = navData[role];
+            navContainer.innerHTML = items.map(item => `
+                <a href="#" class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${item.active ? 'bg-gray-100 text-slate-900' : 'text-slate-500 hover:bg-gray-50 hover:text-slate-900'} transition-colors">
+                    <iconify-icon icon="${item.icon}" stroke-width="1.5" class="text-lg ${item.active ? 'text-violet-600' : 'text-slate-400 group-hover:text-slate-500'}"></iconify-icon>
+                    ${item.label}
+                </a>
+            `).join('');
+        }
+
+        // Login Role Toggle Logic
+        function setRole(role) {
+            const studentBtn = document.getElementById('student-tab');
+            const lecturerBtn = document.getElementById('lecturer-tab');
+            const idLabel = document.getElementById('userIdLabel');
+
+            if (role === 'student') {
+                studentBtn.className = "flex-1 rounded-md bg-white py-2 shadow-sm text-slate-900 ring-1 ring-black/5 transition-all";
+                lecturerBtn.className = "flex-1 rounded-md py-2 text-slate-500 hover:text-slate-900 transition-all";
+                idLabel.textContent = "Matriculation Number";
+            } else {
+                lecturerBtn.className = "flex-1 rounded-md bg-white py-2 shadow-sm text-slate-900 ring-1 ring-black/5 transition-all";
+                studentBtn.className = "flex-1 rounded-md py-2 text-slate-500 hover:text-slate-900 transition-all";
+                idLabel.textContent = "Staff ID";
+            }
+        }
+
+        // Simple Navigation Logic
+        function navigate(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
+            document.getElementById('app-layout').classList.add('hidden');
+
+            if (pageId === 'page-login') {
+                document.getElementById('page-login').classList.remove('hidden');
+            } else {
+                document.getElementById('app-layout').classList.remove('hidden');
+                document.getElementById(pageId).classList.remove('hidden');
+                
+                // Set Header & Sidebar based on page
+                if(pageId === 'page-student') {
+                    document.getElementById('header-greeting').textContent = 'Welcome, Abdurrahman';
+                    renderSidebar('student');
+                } else if(pageId === 'page-lecturer') {
+                    document.getElementById('header-greeting').textContent = 'Lecturer Dashboard';
+                    renderSidebar('lecturer');
+                }
+            }
+        }
+
+        // Initialize UI
+        setRole('student');
+    </script>
+
+</body></html>
