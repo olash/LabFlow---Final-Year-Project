@@ -532,6 +532,7 @@
         let isAuthenticating = false;
         let currentGradingId = null;
         let currentGradingFilePath = null;
+        let currentGradingFileName = null;
         let lecturerSubmissionsCache = [];
         let toastTimeout = null;
 
@@ -998,6 +999,7 @@
 
             currentGradingId = submissionId;
             currentGradingFilePath = sub.file_path;
+            currentGradingFileName = sub.file_name;
 
             const panel = document.getElementById('grading-panel');
             panel.classList.remove('hidden');
@@ -1046,6 +1048,7 @@
             document.getElementById('grading-panel').classList.add('hidden');
             currentGradingId = null;
             currentGradingFilePath = null;
+            currentGradingFileName = null;
 
             const viewer = document.getElementById('pdf-viewer');
             viewer.innerHTML = `
@@ -1107,17 +1110,25 @@
         async function handleDownloadFile() {
             if (!currentGradingFilePath) return;
 
+            const fileName = currentGradingFileName || 'lab_report.pdf';
+
             try {
+                // Generate a signed URL with the download option to set Content-Disposition
                 const { data, error } = await sb.storage
                     .from('lab-reports')
-                    .createSignedUrl(currentGradingFilePath, 3600);
+                    .createSignedUrl(currentGradingFilePath, 3600, {
+                        download: fileName
+                    });
 
                 if (error || !data?.signedUrl) {
                     showToast('Could not generate download link.', 'error');
                     return;
                 }
 
-                window.open(data.signedUrl, '_blank');
+                // Navigate to the signed URL to trigger the browser's native download
+                window.location.href = data.signedUrl;
+
+                showToast('Download started: ' + fileName, 'success');
             } catch (err) {
                 showToast('Download failed.', 'error');
             }
