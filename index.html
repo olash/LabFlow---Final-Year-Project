@@ -1,18 +1,20 @@
+<!DOCTYPE html>
 <html lang="en" class="h-full antialiased bg-gray-50">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LabFlow System</title>
+    <meta name="description" content="Digital assessment portal for lab report submission and grading">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
 
-        /* Custom scrollbar for subtle look */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -30,10 +32,80 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #cbd5e1;
         }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .spinner-dark {
+            border-color: rgba(100, 100, 100, 0.2);
+            border-top-color: #7c3aed;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast animation */
+        .toast-enter {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast-exit {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
 <body class="h-full text-slate-900 selection:bg-violet-100 selection:text-violet-900">
+
+    <!-- ============================== -->
+    <!-- TOAST NOTIFICATION             -->
+    <!-- ============================== -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div id="toast-container"
+            class="flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg border backdrop-blur-md max-w-sm">
+            <iconify-icon id="toast-icon" class="text-xl flex-shrink-0"></iconify-icon>
+            <p id="toast-message" class="text-sm font-medium flex-1"></p>
+            <button onclick="closeToast()"
+                class="ml-2 text-current opacity-50 hover:opacity-100 flex-shrink-0 transition-opacity">
+                <iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon>
+            </button>
+        </div>
+    </div>
 
     <!-- App Container -->
     <div id="app" class="h-full flex w-full">
@@ -58,8 +130,7 @@
                     <p class="mt-2 text-sm leading-6 text-slate-500">Access the digital assessment portal.</p>
 
                     <div class="mt-10">
-                        <form action="#" class="space-y-6"
-                            onsubmit="event.preventDefault(); document.getElementById('student-tab').classList.contains('bg-white') ? navigate('page-student') : navigate('page-lecturer');">
+                        <form id="login-form" class="space-y-6" onsubmit="handleLogin(event)">
 
                             <!-- Role Toggle -->
                             <div class="flex rounded-lg bg-gray-100 p-1 text-sm font-medium">
@@ -73,7 +144,8 @@
                                 <label for="userId" class="block text-sm font-medium leading-6 text-slate-900"
                                     id="userIdLabel">Matriculation Number</label>
                                 <div class="mt-2">
-                                    <input id="userId" name="userId" type="text" required=""
+                                    <input id="userId" name="userId" type="text" required
+                                        placeholder="e.g. 190403022"
                                         class="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-violet-600 sm:text-sm sm:leading-6 transition-all outline-none">
                                 </div>
                             </div>
@@ -82,14 +154,22 @@
                                 <label for="password"
                                     class="block text-sm font-medium leading-6 text-slate-900">Password</label>
                                 <div class="mt-2">
-                                    <input id="password" name="password" type="password" required=""
+                                    <input id="password" name="password" type="password" required
                                         class="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-violet-600 sm:text-sm sm:leading-6 transition-all outline-none">
                                 </div>
                             </div>
 
+                            <!-- Error Message -->
+                            <div id="login-error"
+                                class="hidden rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700 flex items-center gap-2">
+                                <iconify-icon icon="solar:danger-triangle-linear"
+                                    class="text-lg flex-shrink-0"></iconify-icon>
+                                <span id="login-error-text"></span>
+                            </div>
+
                             <div>
-                                <button type="submit"
-                                    class="flex w-full justify-center rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all">Sign
+                                <button type="submit" id="login-btn"
+                                    class="flex w-full justify-center items-center gap-2 rounded-md bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Sign
                                     in</button>
                             </div>
                         </form>
@@ -146,7 +226,7 @@
                     <!-- Nav items injected by JS -->
                 </nav>
                 <div class="px-4 mt-auto">
-                    <button onclick="navigate('page-login')"
+                    <button onclick="handleLogout()"
                         class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-gray-50 hover:text-slate-900 transition-colors">
                         <iconify-icon icon="solar:logout-2-linear" stroke-width="1.5" class="text-lg"></iconify-icon>
                         Log out
@@ -195,13 +275,12 @@
                             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <div class="max-w-md mb-6">
                                     <label for="course"
-                                        class="block text-sm font-medium leading-6 text-slate-900">Select Course</label>
+                                        class="block text-sm font-medium leading-6 text-slate-900">Select
+                                        Course</label>
                                     <div class="mt-2 relative">
                                         <select id="course" name="course"
                                             class="block w-full appearance-none rounded-md border-0 py-2 pl-3 pr-10 text-slate-900 ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-violet-600 sm:text-sm sm:leading-6 bg-white outline-none">
-                                            <option>EEG 401: Control Engineering Lab</option>
-                                            <option>EEG 403: Power Systems Lab</option>
-                                            <option>MEG 312: Fluid Mechanics</option>
+                                            <option value="">Loading courses...</option>
                                         </select>
                                         <div
                                             class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -211,7 +290,8 @@
                                     </div>
                                 </div>
 
-                                <div
+                                <!-- Drop Zone -->
+                                <div id="drop-zone"
                                     class="mt-2 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-12 hover:border-violet-400 hover:bg-violet-50/50 transition-colors cursor-pointer group">
                                     <div class="text-center">
                                         <iconify-icon icon="solar:document-add-linear" stroke-width="1.5"
@@ -225,10 +305,31 @@
                                         </div>
                                         <p class="text-xs leading-5 text-gray-500 mt-1">PDF up to 10MB</p>
                                     </div>
+                                    <input type="file" id="file-input" accept=".pdf,application/pdf" class="hidden">
                                 </div>
+
+                                <!-- Selected File Info -->
+                                <div id="file-info" class="hidden mt-4">
+                                    <div
+                                        class="flex items-center gap-3 p-3 rounded-lg bg-violet-50 border border-violet-200">
+                                        <iconify-icon icon="solar:document-text-linear"
+                                            class="text-2xl text-violet-600 flex-shrink-0"></iconify-icon>
+                                        <div class="flex-1 min-w-0">
+                                            <p id="selected-file-name"
+                                                class="text-sm font-medium text-slate-900 truncate"></p>
+                                            <p id="selected-file-size" class="text-xs text-slate-500"></p>
+                                        </div>
+                                        <button onclick="clearSelectedFile()"
+                                            class="p-1 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                                            <iconify-icon icon="solar:close-circle-linear"
+                                                class="text-xl"></iconify-icon>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div class="mt-4 flex justify-end">
-                                    <button
-                                        class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-500 transition-all opacity-50 cursor-not-allowed">Submit
+                                    <button id="submit-report-btn" onclick="handleSubmitReport()" disabled
+                                        class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-violet-500 transition-all opacity-50 cursor-not-allowed disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">Submit
                                         Report</button>
                                 </div>
                             </div>
@@ -250,43 +351,12 @@
                                                 Score</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-200 bg-white">
-                                        <tr class="hover:bg-gray-50/50 transition-colors">
-                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">EEG 401
+                                    <tbody id="student-submissions-body" class="divide-y divide-gray-200 bg-white">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-12 text-slate-400">
+                                                <div class="spinner-dark mx-auto mb-3"></div>
+                                                <p class="text-sm">Loading submissions...</p>
                                             </td>
-                                            <td
-                                                class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
-                                                <iconify-icon icon="solar:document-text-linear"
-                                                    class="text-lg text-red-500"></iconify-icon>
-                                                Lab_1_PID.pdf
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Oct 24, 2023 • 14:30
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4">
-                                                <span
-                                                    class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending
-                                                    Evaluation</span>
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-right text-slate-400">-</td>
-                                        </tr>
-                                        <tr class="hover:bg-gray-50/50 transition-colors">
-                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">MEG 312
-                                            </td>
-                                            <td
-                                                class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
-                                                <iconify-icon icon="solar:document-text-linear"
-                                                    class="text-lg text-red-500"></iconify-icon>
-                                                Bernoulli_Exp.pdf
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Oct 12, 2023 • 09:15
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4">
-                                                <span
-                                                    class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Graded</span>
-                                            </td>
-                                            <td
-                                                class="whitespace-nowrap px-6 py-4 text-right font-semibold text-slate-900">
-                                                85 / 100</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -303,29 +373,31 @@
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <dt class="truncate text-sm font-medium text-slate-500">Total Submissions</dt>
-                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">142</dd>
+                                <dd id="stat-total" class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+                                    —</dd>
                             </div>
                             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <dt class="truncate text-sm font-medium text-slate-500">Ungraded</dt>
-                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-amber-600">34</dd>
+                                <dd id="stat-ungraded"
+                                    class="mt-2 text-3xl font-semibold tracking-tight text-amber-600">—</dd>
                             </div>
                             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <dt class="truncate text-sm font-medium text-slate-500">Graded</dt>
-                                <dd class="mt-2 text-3xl font-semibold tracking-tight text-emerald-600">108</dd>
+                                <dd id="stat-graded"
+                                    class="mt-2 text-3xl font-semibold tracking-tight text-emerald-600">—</dd>
                             </div>
                         </div>
 
                         <!-- Submissions Table -->
                         <section>
                             <div class="sm:flex sm:items-center sm:justify-between mb-4">
-                                <h2 class="text-base font-medium text-slate-900">Pending Submissions</h2>
+                                <h2 class="text-base font-medium text-slate-900">All Submissions</h2>
                                 <div class="mt-3 sm:ml-4 sm:mt-0 flex gap-2">
                                     <div class="relative">
-                                        <select
+                                        <select id="lecturer-course-filter"
+                                            onchange="loadLecturerSubmissions(this.value)"
                                             class="block w-full appearance-none rounded-md border border-gray-200 py-1.5 pl-3 pr-8 text-sm text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 bg-white shadow-sm">
-                                            <option>All Courses</option>
-                                            <option>EEG 401</option>
-                                            <option>EEG 403</option>
+                                            <option value="all">All Courses</option>
                                         </select>
                                         <div
                                             class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -340,7 +412,7 @@
                                 <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
                                     <thead class="bg-gray-50/50">
                                         <tr>
-                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Student ID</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Student</th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Course Code
                                             </th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Submission Time
@@ -350,35 +422,11 @@
                                                 Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-200 bg-white">
-                                        <tr class="hover:bg-gray-50/50 transition-colors bg-violet-50/30">
-                                            <!-- Active row simulation -->
-                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">190403012
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">EEG 401</td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Today • 10:23 AM</td>
-                                            <td class="whitespace-nowrap px-6 py-4">
-                                                <span
-                                                    class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-right">
-                                                <button
-                                                    class="text-violet-600 hover:text-violet-900 font-medium text-sm">Grading...</button>
-                                            </td>
-                                        </tr>
-                                        <tr class="hover:bg-gray-50/50 transition-colors">
-                                            <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">190403045
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">EEG 401</td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-slate-500">Today • 09:15 AM</td>
-                                            <td class="whitespace-nowrap px-6 py-4">
-                                                <span
-                                                    class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
-                                            </td>
-                                            <td class="whitespace-nowrap px-6 py-4 text-right">
-                                                <button
-                                                    class="text-slate-500 hover:text-slate-900 font-medium text-sm">Review
-                                                    &amp; Grade</button>
+                                    <tbody id="lecturer-submissions-body" class="divide-y divide-gray-200 bg-white">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-12 text-slate-400">
+                                                <div class="spinner-dark mx-auto mb-3"></div>
+                                                <p class="text-sm">Loading submissions...</p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -386,36 +434,24 @@
                             </div>
                         </section>
 
-                        <!-- Grading Panel Mockup (Appears when row clicked) -->
-                        <section class="mt-8 pt-8 border-t border-gray-200">
+                        <!-- Grading Panel (Hidden until a submission is selected) -->
+                        <section id="grading-panel" class="hidden mt-8 pt-8 border-t border-gray-200">
                             <div class="flex items-center justify-between mb-4">
                                 <h2 class="text-base font-medium text-slate-900">Evaluation: <span
-                                        class="font-normal text-slate-500">190403012 - EEG 401</span></h2>
-                                <button class="p-1 text-gray-400 hover:text-gray-600"><iconify-icon
-                                        icon="solar:close-circle-linear" class="text-xl"></iconify-icon></button>
+                                        id="grading-student-info"
+                                        class="font-normal text-slate-500"></span></h2>
+                                <button onclick="closeGrading()" class="p-1 text-gray-400 hover:text-gray-600">
+                                    <iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon>
+                                </button>
                             </div>
 
                             <div class="flex flex-col lg:flex-row gap-6 h-[500px]">
-                                <!-- Left: PDF Viewer Placeholder -->
-                                <div
+                                <!-- Left: PDF Viewer -->
+                                <div id="pdf-viewer"
                                     class="flex-1 rounded-xl border border-gray-200 bg-gray-100/50 flex flex-col items-center justify-center text-slate-400 relative overflow-hidden">
-                                    <!-- Fake PDF header -->
-                                    <div
-                                        class="absolute top-0 w-full h-10 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
-                                        <div class="text-xs text-slate-500 flex items-center gap-2"><iconify-icon
-                                                icon="solar:document-text-linear"></iconify-icon>
-                                            Lab_Report_PID_Control.pdf</div>
-                                        <div class="flex gap-2">
-                                            <button class="p-1 hover:bg-gray-100 rounded text-slate-500"><iconify-icon
-                                                    icon="solar:magnifer-zoom-in-linear"></iconify-icon></button>
-                                            <button class="p-1 hover:bg-gray-100 rounded text-slate-500"><iconify-icon
-                                                    icon="solar:magnifer-zoom-out-linear"></iconify-icon></button>
-                                        </div>
-                                    </div>
                                     <iconify-icon icon="solar:file-text-linear" stroke-width="1"
                                         class="text-6xl mb-4 text-gray-300"></iconify-icon>
-                                    <p class="text-sm font-medium">PDF Document Viewer</p>
-                                    <p class="text-xs mt-1">Scroll to review content</p>
+                                    <p class="text-sm font-medium">Select a submission to view</p>
                                 </div>
 
                                 <!-- Right: Grading Form -->
@@ -425,7 +461,7 @@
                                             class="block text-sm font-medium leading-6 text-slate-900">Numerical Score
                                             (Out of 100)</label>
                                         <div class="mt-2 relative">
-                                            <input type="number" id="score"
+                                            <input type="number" id="score" min="0" max="100"
                                                 class="block w-full rounded-md border-0 py-3 px-4 text-2xl font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-300 focus:ring-2 focus:ring-inset focus:ring-violet-600 text-center outline-none transition-all"
                                                 placeholder="0">
                                         </div>
@@ -442,9 +478,15 @@
                                         </div>
                                     </div>
 
-                                    <div class="pt-2">
-                                        <button
-                                            class="flex w-full justify-center items-center gap-2 rounded-md bg-violet-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all">
+                                    <div class="flex gap-3 pt-2">
+                                        <button onclick="handleDownloadFile()"
+                                            class="flex items-center justify-center gap-2 rounded-md bg-gray-100 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-gray-200 transition-all">
+                                            <iconify-icon icon="solar:download-linear"
+                                                class="text-lg"></iconify-icon>
+                                            Download
+                                        </button>
+                                        <button id="save-grade-btn" onclick="handleSaveGrade()"
+                                            class="flex flex-1 justify-center items-center gap-2 rounded-md bg-violet-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                             <iconify-icon icon="solar:check-circle-linear"
                                                 class="text-lg"></iconify-icon>
                                             Save &amp; Mark Graded
@@ -461,9 +503,629 @@
 
     </div>
 
-    <!-- Navigation & Logic Script -->
+    <!-- ============================== -->
+    <!-- APPLICATION LOGIC              -->
+    <!-- ============================== -->
     <script>
-        // Data for sidebars
+        // ================================
+        // CONFIGURATION
+        // ================================
+        const SUPABASE_URL = 'https://iymxctqehmsuklugxnvk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5bXhjdHFlaG1zdWtsdWd4bnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTc2MTMsImV4cCI6MjEwNDM3MzYxM30.cpWIHHUdRys3HNuBTVdkYy8VnjUnMK_jeBwdY_rzb7Y';
+        const STUDENT_DOMAIN = '@student.labflow.edu';
+        const STAFF_DOMAIN = '@staff.labflow.edu';
+
+        // ================================
+        // SUPABASE CLIENT
+        // ================================
+        const { createClient } = supabase;
+        const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ================================
+        // STATE
+        // ================================
+        let currentUser = null;
+        let currentProfile = null;
+        let selectedFile = null;
+        let currentRole = 'student'; // login toggle role
+        let courses = [];
+        let isAuthenticating = false;
+        let currentGradingId = null;
+        let currentGradingFilePath = null;
+        let lecturerSubmissionsCache = [];
+        let toastTimeout = null;
+
+        // ================================
+        // TOAST NOTIFICATIONS
+        // ================================
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const container = document.getElementById('toast-container');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            msg.textContent = message;
+
+            // Reset classes
+            container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg border backdrop-blur-md max-w-sm';
+
+            if (type === 'success') {
+                container.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+                icon.setAttribute('icon', 'solar:check-circle-linear');
+            } else if (type === 'error') {
+                container.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+                icon.setAttribute('icon', 'solar:danger-triangle-linear');
+            } else {
+                container.classList.add('bg-blue-50', 'border-blue-200', 'text-blue-800');
+                icon.setAttribute('icon', 'solar:info-circle-linear');
+            }
+
+            toast.classList.remove('hidden');
+            toast.className = 'fixed top-4 right-4 z-50 toast-enter';
+
+            toastTimeout = setTimeout(() => {
+                toast.className = 'fixed top-4 right-4 z-50 toast-exit';
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 4000);
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toast');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toast.className = 'fixed top-4 right-4 z-50 toast-exit';
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }
+
+        // ================================
+        // AUTHENTICATION
+        // ================================
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('userId').value.trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('login-error');
+            const errorText = document.getElementById('login-error-text');
+
+            if (!userId || !password) {
+                errorText.textContent = 'Please fill in all fields.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            // Map matric/staff ID to email
+            const domain = currentRole === 'student' ? STUDENT_DOMAIN : STAFF_DOMAIN;
+            const email = userId.toLowerCase() + domain;
+
+            // Show loading
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+            errorEl.classList.add('hidden');
+            isAuthenticating = true;
+
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+                if (error) {
+                    errorText.textContent = 'Invalid credentials. Please check your ID and password.';
+                    errorEl.classList.remove('hidden');
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = 'Sign in';
+                    isAuthenticating = false;
+                    return;
+                }
+
+                currentUser = data.user;
+                await loadUserProfile();
+                isAuthenticating = false;
+
+            } catch (err) {
+                errorText.textContent = 'Connection error. Please try again.';
+                errorEl.classList.remove('hidden');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Sign in';
+                isAuthenticating = false;
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!currentUser) {
+                const { data: { user } } = await sb.auth.getUser();
+                if (!user) return;
+                currentUser = user;
+            }
+
+            const { data: profile, error } = await sb
+                .from('profiles')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (error || !profile) {
+                showToast('Profile not found. Please contact your administrator.', 'error');
+                await sb.auth.signOut();
+                return;
+            }
+
+            currentProfile = profile;
+
+            if (profile.role === 'student') {
+                navigate('page-student');
+                await loadStudentDashboard();
+            } else if (profile.role === 'lecturer') {
+                navigate('page-lecturer');
+                await loadLecturerDashboard();
+            }
+        }
+
+        async function handleLogout() {
+            await sb.auth.signOut();
+            currentUser = null;
+            currentProfile = null;
+            selectedFile = null;
+            currentGradingId = null;
+            lecturerSubmissionsCache = [];
+
+            // Reset login form
+            document.getElementById('login-form').reset();
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-btn').disabled = false;
+            document.getElementById('login-btn').innerHTML = 'Sign in';
+
+            navigate('page-login');
+            showToast('Signed out successfully.', 'success');
+        }
+
+        // ================================
+        // COURSES
+        // ================================
+        async function loadCourses() {
+            const { data, error } = await sb.from('courses').select('*').order('code');
+            if (!error && data) {
+                courses = data;
+                const select = document.getElementById('course');
+                select.innerHTML = data.map(c =>
+                    `<option value="${c.id}">${c.code}: ${c.title}</option>`
+                ).join('');
+            }
+        }
+
+        // ================================
+        // STUDENT DASHBOARD
+        // ================================
+        async function loadStudentDashboard() {
+            const name = currentProfile.full_name || 'Student';
+            document.getElementById('header-greeting').textContent = `Welcome, ${name}`;
+            renderSidebar('student');
+            await Promise.all([loadCourses(), loadStudentSubmissions()]);
+        }
+
+        async function loadStudentSubmissions() {
+            const tbody = document.getElementById('student-submissions-body');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                <div class="spinner-dark mx-auto mb-3"></div>
+                <p class="text-sm">Loading submissions...</p>
+            </td></tr>`;
+
+            const { data, error } = await sb
+                .from('submissions')
+                .select('*, courses(code, title)')
+                .eq('student_id', currentUser.id)
+                .order('submitted_at', { ascending: false });
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                    <iconify-icon icon="solar:danger-triangle-linear" class="text-3xl text-red-300 mb-2"></iconify-icon>
+                    <p class="text-sm text-red-400">Error loading submissions</p>
+                </td></tr>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                    <iconify-icon icon="solar:inbox-linear" class="text-4xl text-gray-300 mb-2"></iconify-icon>
+                    <p class="text-sm">No submissions yet. Upload your first report above.</p>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(s => `
+                <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">${s.courses?.code || 'N/A'}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
+                        <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500"></iconify-icon>
+                        ${escapeHtml(s.file_name)}
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500">${formatDate(s.submitted_at)}</td>
+                    <td class="whitespace-nowrap px-6 py-4">
+                        ${s.status === 'graded'
+                    ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Graded</span>'
+                    : '<span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending Evaluation</span>'
+                }
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-right ${s.status === 'graded' ? 'font-semibold text-slate-900' : 'text-slate-400'}">
+                        ${s.status === 'graded' ? s.score + ' / 100' : '—'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ================================
+        // FILE UPLOAD
+        // ================================
+        function initFileUpload() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            if (!dropZone || !fileInput) return;
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('border-violet-400', 'bg-violet-50/50');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('border-violet-400', 'bg-violet-50/50');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('border-violet-400', 'bg-violet-50/50');
+                if (e.dataTransfer.files.length) {
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        function handleFileSelect(file) {
+            if (file.type !== 'application/pdf') {
+                showToast('Only PDF files are accepted.', 'error');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('File must be under 10MB.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+
+            document.getElementById('file-info').classList.remove('hidden');
+            document.getElementById('selected-file-name').textContent = file.name;
+            document.getElementById('selected-file-size').textContent = formatFileSize(file.size);
+
+            const submitBtn = document.getElementById('submit-report-btn');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function clearSelectedFile() {
+            selectedFile = null;
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('file-input').value = '';
+
+            const submitBtn = document.getElementById('submit-report-btn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        async function handleSubmitReport() {
+            if (!selectedFile || !currentUser) return;
+
+            const courseId = document.getElementById('course').value;
+            if (!courseId) {
+                showToast('Please select a course.', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-report-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Uploading...';
+
+            try {
+                const timestamp = Date.now();
+                const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const filePath = `${currentUser.id}/${timestamp}_${safeFileName}`;
+
+                // Upload file to Supabase Storage
+                const { data: uploadData, error: uploadError } = await sb.storage
+                    .from('lab-reports')
+                    .upload(filePath, selectedFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    throw new Error('Upload failed: ' + uploadError.message);
+                }
+
+                // Insert submission record
+                const { error: insertError } = await sb.from('submissions').insert({
+                    student_id: currentUser.id,
+                    course_id: courseId,
+                    file_name: selectedFile.name,
+                    file_path: filePath
+                });
+
+                if (insertError) {
+                    throw new Error('Failed to save submission: ' + insertError.message);
+                }
+
+                showToast('Report submitted successfully!', 'success');
+
+                // Reset upload form
+                clearSelectedFile();
+                submitBtn.innerHTML = 'Submit Report';
+
+                // Reload submissions table
+                await loadStudentSubmissions();
+
+            } catch (err) {
+                showToast(err.message || 'Submission failed. Please try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Report';
+            }
+        }
+
+        // ================================
+        // LECTURER DASHBOARD
+        // ================================
+        async function loadLecturerDashboard() {
+            document.getElementById('header-greeting').textContent = 'Lecturer Dashboard';
+            renderSidebar('lecturer');
+
+            // Load stats
+            const { data: allSubs, error } = await sb
+                .from('submissions')
+                .select('id, status');
+
+            if (!error && allSubs) {
+                const total = allSubs.length;
+                const graded = allSubs.filter(s => s.status === 'graded').length;
+                const ungraded = total - graded;
+
+                document.getElementById('stat-total').textContent = total;
+                document.getElementById('stat-ungraded').textContent = ungraded;
+                document.getElementById('stat-graded').textContent = graded;
+            }
+
+            // Populate course filter
+            await populateLecturerFilter();
+
+            // Load submissions
+            await loadLecturerSubmissions('all');
+        }
+
+        async function populateLecturerFilter() {
+            const { data } = await sb.from('courses').select('*').order('code');
+            if (data) {
+                const select = document.getElementById('lecturer-course-filter');
+                select.innerHTML = '<option value="all">All Courses</option>' +
+                    data.map(c => `<option value="${c.id}">${c.code}</option>`).join('');
+            }
+        }
+
+        async function loadLecturerSubmissions(courseFilter) {
+            const tbody = document.getElementById('lecturer-submissions-body');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                <div class="spinner-dark mx-auto mb-3"></div>
+                <p class="text-sm">Loading submissions...</p>
+            </td></tr>`;
+
+            let query = sb
+                .from('submissions')
+                .select('*, courses(code, title), profiles!submissions_student_id_fkey(full_name, matric_number)')
+                .order('submitted_at', { ascending: false });
+
+            if (courseFilter && courseFilter !== 'all') {
+                query = query.eq('course_id', courseFilter);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                    <iconify-icon icon="solar:danger-triangle-linear" class="text-3xl text-red-300 mb-2"></iconify-icon>
+                    <p class="text-sm text-red-400">Error loading submissions</p>
+                </td></tr>`;
+                return;
+            }
+
+            // Cache for grading panel lookups
+            lecturerSubmissionsCache = data || [];
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                    <iconify-icon icon="solar:inbox-linear" class="text-4xl text-gray-300 mb-2"></iconify-icon>
+                    <p class="text-sm">No submissions found.</p>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(s => {
+                const studentName = s.profiles?.full_name || 'Unknown';
+                const studentMatric = s.profiles?.matric_number || 'N/A';
+                const courseCode = s.courses?.code || 'N/A';
+                const isPending = s.status === 'pending';
+
+                return `
+                <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="whitespace-nowrap px-6 py-4">
+                        <div class="font-medium text-slate-900">${escapeHtml(studentMatric)}</div>
+                        <div class="text-xs text-slate-400">${escapeHtml(studentName)}</div>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500">${escapeHtml(courseCode)}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500">${formatDate(s.submitted_at)}</td>
+                    <td class="whitespace-nowrap px-6 py-4">
+                        ${isPending
+                        ? '<span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>'
+                        : `<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Graded (${s.score}/100)</span>`
+                    }
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-right">
+                        <button onclick="openGrading('${s.id}')"
+                            class="${isPending ? 'text-violet-600 hover:text-violet-900' : 'text-slate-500 hover:text-slate-900'} font-medium text-sm transition-colors">
+                            ${isPending ? 'Review & Grade' : 'View / Edit'}
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ================================
+        // GRADING PANEL
+        // ================================
+        async function openGrading(submissionId) {
+            const sub = lecturerSubmissionsCache.find(s => s.id === submissionId);
+            if (!sub) {
+                showToast('Submission not found.', 'error');
+                return;
+            }
+
+            currentGradingId = submissionId;
+            currentGradingFilePath = sub.file_path;
+
+            const panel = document.getElementById('grading-panel');
+            panel.classList.remove('hidden');
+
+            const studentInfo = `${sub.profiles?.matric_number || 'N/A'} — ${sub.courses?.code || 'N/A'}`;
+            document.getElementById('grading-student-info').textContent = studentInfo;
+            document.getElementById('score').value = sub.score || '';
+            document.getElementById('feedback').value = sub.feedback || '';
+
+            // Load PDF viewer
+            const viewer = document.getElementById('pdf-viewer');
+            viewer.innerHTML = `<div class="flex flex-col items-center justify-center h-full">
+                <div class="spinner-dark mb-3"></div>
+                <p class="text-sm text-slate-400">Loading document...</p>
+            </div>`;
+
+            try {
+                const { data: signedUrlData, error: signError } = await sb.storage
+                    .from('lab-reports')
+                    .createSignedUrl(sub.file_path, 3600);
+
+                if (signError || !signedUrlData?.signedUrl) {
+                    throw new Error('Could not load document');
+                }
+
+                viewer.innerHTML = `
+                    <iframe src="${signedUrlData.signedUrl}#toolbar=1" 
+                        class="w-full h-full rounded-xl" frameborder="0"
+                        title="PDF Document Viewer"></iframe>`;
+
+            } catch (err) {
+                viewer.innerHTML = `<div class="flex flex-col items-center justify-center h-full">
+                    <iconify-icon icon="solar:file-corrupted-linear" class="text-4xl text-gray-300 mb-3"></iconify-icon>
+                    <p class="text-sm text-slate-400 font-medium">Unable to preview document</p>
+                    <button onclick="handleDownloadFile()" class="mt-3 text-sm text-violet-600 hover:text-violet-500 font-medium">
+                        Download instead
+                    </button>
+                </div>`;
+            }
+
+            // Scroll to panel
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closeGrading() {
+            document.getElementById('grading-panel').classList.add('hidden');
+            currentGradingId = null;
+            currentGradingFilePath = null;
+
+            const viewer = document.getElementById('pdf-viewer');
+            viewer.innerHTML = `
+                <iconify-icon icon="solar:file-text-linear" stroke-width="1" class="text-6xl mb-4 text-gray-300"></iconify-icon>
+                <p class="text-sm font-medium text-slate-400">Select a submission to view</p>`;
+        }
+
+        async function handleSaveGrade() {
+            if (!currentGradingId) return;
+
+            const scoreValue = document.getElementById('score').value;
+            const feedback = document.getElementById('feedback').value;
+
+            if (!scoreValue || isNaN(parseInt(scoreValue))) {
+                showToast('Please enter a valid numerical score.', 'error');
+                return;
+            }
+
+            const score = parseInt(scoreValue);
+            if (score < 0 || score > 100) {
+                showToast('Score must be between 0 and 100.', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-grade-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
+
+            try {
+                const { error } = await sb
+                    .from('submissions')
+                    .update({
+                        score: score,
+                        feedback: feedback,
+                        status: 'graded',
+                        graded_by: currentUser.id,
+                        graded_at: new Date().toISOString()
+                    })
+                    .eq('id', currentGradingId);
+
+                if (error) {
+                    throw new Error('Failed to save grade: ' + error.message);
+                }
+
+                showToast('Grade saved successfully!', 'success');
+                closeGrading();
+
+                // Reload dashboard data
+                await loadLecturerDashboard();
+
+            } catch (err) {
+                showToast(err.message || 'Failed to save grade.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<iconify-icon icon="solar:check-circle-linear" class="text-lg"></iconify-icon> Save & Mark Graded';
+            }
+        }
+
+        async function handleDownloadFile() {
+            if (!currentGradingFilePath) return;
+
+            try {
+                const { data, error } = await sb.storage
+                    .from('lab-reports')
+                    .createSignedUrl(currentGradingFilePath, 3600);
+
+                if (error || !data?.signedUrl) {
+                    showToast('Could not generate download link.', 'error');
+                    return;
+                }
+
+                window.open(data.signedUrl, '_blank');
+            } catch (err) {
+                showToast('Download failed.', 'error');
+            }
+        }
+
+        // ================================
+        // NAVIGATION & UI
+        // ================================
         const navData = {
             student: [
                 { icon: 'solar:widget-linear', label: 'Dashboard', active: true },
@@ -489,24 +1151,29 @@
             `).join('');
         }
 
-        // Login Role Toggle Logic
         function setRole(role) {
+            currentRole = role;
             const studentBtn = document.getElementById('student-tab');
             const lecturerBtn = document.getElementById('lecturer-tab');
             const idLabel = document.getElementById('userIdLabel');
+            const idInput = document.getElementById('userId');
 
             if (role === 'student') {
                 studentBtn.className = "flex-1 rounded-md bg-white py-2 shadow-sm text-slate-900 ring-1 ring-black/5 transition-all";
                 lecturerBtn.className = "flex-1 rounded-md py-2 text-slate-500 hover:text-slate-900 transition-all";
                 idLabel.textContent = "Matriculation Number";
+                idInput.placeholder = "e.g. 190403022";
             } else {
                 lecturerBtn.className = "flex-1 rounded-md bg-white py-2 shadow-sm text-slate-900 ring-1 ring-black/5 transition-all";
                 studentBtn.className = "flex-1 rounded-md py-2 text-slate-500 hover:text-slate-900 transition-all";
                 idLabel.textContent = "Staff ID";
+                idInput.placeholder = "e.g. L001";
             }
+
+            // Clear any error
+            document.getElementById('login-error').classList.add('hidden');
         }
 
-        // Simple Navigation Logic
         function navigate(pageId) {
             // Hide all pages
             document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
@@ -517,20 +1184,56 @@
             } else {
                 document.getElementById('app-layout').classList.remove('hidden');
                 document.getElementById(pageId).classList.remove('hidden');
-
-                // Set Header & Sidebar based on page
-                if (pageId === 'page-student') {
-                    document.getElementById('header-greeting').textContent = 'Welcome, Abdurrahman';
-                    renderSidebar('student');
-                } else if (pageId === 'page-lecturer') {
-                    document.getElementById('header-greeting').textContent = 'Lecturer Dashboard';
-                    renderSidebar('lecturer');
-                }
             }
         }
 
-        // Initialize UI
+        // ================================
+        // HELPERS
+        // ================================
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            const dateFormatted = d.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+            const timeFormatted = d.toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit'
+            });
+            return `${dateFormatted} • ${timeFormatted}`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ================================
+        // INITIALIZATION
+        // ================================
         setRole('student');
+        initFileUpload();
+
+        // Auth state listener — handles session restoration on page refresh
+        sb.auth.onAuthStateChange(async (event, session) => {
+            if (isAuthenticating) return; // Login handler manages its own flow
+
+            if (event === 'INITIAL_SESSION' && session) {
+                currentUser = session.user;
+                await loadUserProfile();
+            } else if (event === 'SIGNED_OUT') {
+                currentUser = null;
+                currentProfile = null;
+                navigate('page-login');
+            }
+        });
     </script>
 
 </body>
