@@ -440,9 +440,17 @@
                                 <h2 class="text-base font-medium text-slate-900">Evaluation: <span
                                         id="grading-student-info"
                                         class="font-normal text-slate-500"></span></h2>
-                                <button onclick="closeGrading()" class="p-1 text-gray-400 hover:text-gray-600">
-                                    <iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon>
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="handleViewFullPdf()"
+                                        title="Open PDF in a new browser tab"
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-gray-50 transition-colors">
+                                        <iconify-icon icon="solar:maximize-square-3-linear" class="text-sm"></iconify-icon>
+                                        Open in New Tab
+                                    </button>
+                                    <button onclick="closeGrading()" class="p-1 text-gray-400 hover:text-gray-600">
+                                        <iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="flex flex-col lg:flex-row gap-6 h-[500px]">
@@ -478,9 +486,17 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex gap-3 pt-2">
+                                    <div class="flex gap-2 pt-2">
+                                        <button onclick="handleViewFullPdf()"
+                                            title="Open full PDF in new browser tab"
+                                            class="flex items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-gray-50 transition-all">
+                                            <iconify-icon icon="solar:maximize-square-3-linear"
+                                                class="text-lg text-slate-500"></iconify-icon>
+                                            View
+                                        </button>
                                         <button onclick="handleDownloadFile()"
-                                            class="flex items-center justify-center gap-2 rounded-md bg-gray-100 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-gray-200 transition-all">
+                                            title="Save PDF file to computer"
+                                            class="flex items-center justify-center gap-1.5 rounded-md bg-gray-100 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-gray-200 transition-all">
                                             <iconify-icon icon="solar:download-linear"
                                                 class="text-lg"></iconify-icon>
                                             Download
@@ -533,6 +549,7 @@
         let currentGradingId = null;
         let currentGradingFilePath = null;
         let currentGradingFileName = null;
+        let currentGradingSignedUrl = null;
         let lecturerSubmissionsCache = [];
         let toastTimeout = null;
 
@@ -736,9 +753,14 @@
             tbody.innerHTML = data.map(s => `
                 <tr class="hover:bg-gray-50/50 transition-colors">
                     <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">${s.courses?.code || 'N/A'}</td>
-                    <td class="whitespace-nowrap px-6 py-4 text-slate-500 flex items-center gap-2">
-                        <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500"></iconify-icon>
-                        ${escapeHtml(s.file_name)}
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500">
+                        <button onclick="downloadStudentSubmission('${s.file_path}', '${escapeHtml(s.file_name)}')" 
+                            title="Download and view this report"
+                            class="hover:text-violet-600 hover:underline flex items-center gap-2 text-left font-medium transition-colors group">
+                            <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500 group-hover:scale-110 transition-transform"></iconify-icon>
+                            <span>${escapeHtml(s.file_name)}</span>
+                            <iconify-icon icon="solar:download-minimalistic-linear" class="text-sm text-slate-400 group-hover:text-violet-600"></iconify-icon>
+                        </button>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-slate-500">${formatDate(s.submitted_at)}</td>
                     <td class="whitespace-nowrap px-6 py-4">
@@ -848,7 +870,7 @@
                     .upload(filePath, selectedFile, {
                         cacheControl: '3600',
                         upsert: false,
-                        contentType: selectedFile.type || 'application/pdf'
+                        contentType: 'application/pdf'
                     });
 
                 if (uploadError) {
@@ -1026,12 +1048,15 @@
                     throw new Error('Could not load document');
                 }
 
+                currentGradingSignedUrl = signedUrlData.signedUrl;
+
                 viewer.innerHTML = `
                     <iframe src="${signedUrlData.signedUrl}#toolbar=1" 
                         class="w-full h-full rounded-xl" frameborder="0"
                         title="PDF Document Viewer"></iframe>`;
 
             } catch (err) {
+                currentGradingSignedUrl = null;
                 viewer.innerHTML = `<div class="flex flex-col items-center justify-center h-full">
                     <iconify-icon icon="solar:file-corrupted-linear" class="text-4xl text-gray-300 mb-3"></iconify-icon>
                     <p class="text-sm text-slate-400 font-medium">Unable to preview document</p>
@@ -1050,6 +1075,7 @@
             currentGradingId = null;
             currentGradingFilePath = null;
             currentGradingFileName = null;
+            currentGradingSignedUrl = null;
 
             const viewer = document.getElementById('pdf-viewer');
             viewer.innerHTML = `
@@ -1144,6 +1170,55 @@
                 // Clean up memory
                 setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
 
+                showToast('Download started: ' + safeName, 'success');
+            } catch (err) {
+                showToast('Download failed.', 'error');
+            }
+        }
+
+        function handleViewFullPdf() {
+            if (currentGradingSignedUrl) {
+                window.open(currentGradingSignedUrl, '_blank');
+            } else if (currentGradingFilePath) {
+                sb.storage.from('lab-reports').createSignedUrl(currentGradingFilePath, 3600).then(({ data, error }) => {
+                    if (data?.signedUrl) {
+                        currentGradingSignedUrl = data.signedUrl;
+                        window.open(data.signedUrl, '_blank');
+                    } else {
+                        showToast('Could not generate view link. Downloading instead...', 'info');
+                        handleDownloadFile();
+                    }
+                });
+            } else {
+                showToast('No document selected to view.', 'error');
+            }
+        }
+
+        async function downloadStudentSubmission(filePath, fileName) {
+            if (!filePath) return;
+            const name = fileName || 'submitted_report.pdf';
+            const safeName = name.endsWith('.pdf') ? name : name + '.pdf';
+
+            try {
+                showToast('Preparing download: ' + safeName, 'info');
+                const { data, error } = await sb.storage
+                    .from('lab-reports')
+                    .download(filePath);
+
+                if (error || !data) {
+                    showToast('Could not download file.', 'error');
+                    return;
+                }
+
+                const pdfBlob = new Blob([data], { type: 'application/pdf' });
+                const objectUrl = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = safeName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
                 showToast('Download started: ' + safeName, 'success');
             } catch (err) {
                 showToast('Download failed.', 'error');
