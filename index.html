@@ -847,7 +847,8 @@
                     .from('lab-reports')
                     .upload(filePath, selectedFile, {
                         cacheControl: '3600',
-                        upsert: false
+                        upsert: false,
+                        contentType: selectedFile.type || 'application/pdf'
                     });
 
                 if (uploadError) {
@@ -1111,24 +1112,39 @@
             if (!currentGradingFilePath) return;
 
             const fileName = currentGradingFileName || 'lab_report.pdf';
+            const safeName = fileName.endsWith('.pdf') ? fileName : fileName + '.pdf';
 
             try {
-                // Generate a signed URL with the download option to set Content-Disposition
+                // Fetch the file binary data directly
                 const { data, error } = await sb.storage
                     .from('lab-reports')
-                    .createSignedUrl(currentGradingFilePath, 3600, {
-                        download: fileName
-                    });
+                    .download(currentGradingFilePath);
 
-                if (error || !data?.signedUrl) {
-                    showToast('Could not generate download link.', 'error');
+                if (error || !data) {
+                    showToast('Could not download file.', 'error');
                     return;
                 }
 
-                // Navigate to the signed URL to trigger the browser's native download
-                window.location.href = data.signedUrl;
+                // Force the MIME type to 'application/pdf'.
+                // This repairs files that were previously uploaded as generic binary data.
+                const pdfBlob = new Blob([data], { type: 'application/pdf' });
+                
+                // Create a local same-origin URL for the strict PDF Blob
+                const objectUrl = URL.createObjectURL(pdfBlob);
 
-                showToast('Download started: ' + fileName, 'success');
+                // Trigger a local anchor download. Because it's same-origin, 
+                // the browser respects the exact 'download' filename and avoids cross-origin blocking.
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = safeName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Clean up memory
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+
+                showToast('Download started: ' + safeName, 'success');
             } catch (err) {
                 showToast('Download failed.', 'error');
             }
@@ -1139,15 +1155,10 @@
         // ================================
         const navData = {
             student: [
-                { icon: 'solar:widget-linear', label: 'Dashboard', active: true },
-                { icon: 'solar:book-bookmark-linear', label: 'My Courses', active: false },
-                { icon: 'solar:settings-linear', label: 'Settings', active: false }
+                { icon: 'solar:widget-linear', label: 'Dashboard', active: true }
             ],
             lecturer: [
-                { icon: 'solar:widget-linear', label: 'Overview', active: true },
-                { icon: 'solar:folder-with-files-linear', label: 'Assessments', active: false },
-                { icon: 'solar:users-group-rounded-linear', label: 'Students', active: false },
-                { icon: 'solar:settings-linear', label: 'Settings', active: false }
+                { icon: 'solar:widget-linear', label: 'Overview', active: true }
             ]
         };
 
