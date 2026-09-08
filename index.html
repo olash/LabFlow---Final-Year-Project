@@ -338,7 +338,7 @@
                         <!-- Recent Submissions -->
                         <section>
                             <h2 class="text-base font-medium text-slate-900 mb-4">Recent Submissions</h2>
-                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                                 <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
                                     <thead class="bg-gray-50/50">
                                         <tr>
@@ -347,13 +347,13 @@
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Date Submitted
                                             </th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Status</th>
-                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500 text-right">
-                                                Score</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Score</th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">Feedback</th>
                                         </tr>
                                     </thead>
                                     <tbody id="student-submissions-body" class="divide-y divide-gray-200 bg-white">
                                         <tr>
-                                            <td colspan="5" class="text-center py-12 text-slate-400">
+                                            <td colspan="6" class="text-center py-12 text-slate-400">
                                                 <div class="spinner-dark mx-auto mb-3"></div>
                                                 <p class="text-sm">Loading submissions...</p>
                                             </td>
@@ -408,13 +408,14 @@
                                 </div>
                             </div>
 
-                            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                                 <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
                                     <thead class="bg-gray-50/50">
                                         <tr>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Student</th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Course Code
                                             </th>
+                                            <th scope="col" class="px-6 py-3 font-medium text-slate-500">File</th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Submission Time
                                             </th>
                                             <th scope="col" class="px-6 py-3 font-medium text-slate-500">Status</th>
@@ -424,7 +425,7 @@
                                     </thead>
                                     <tbody id="lecturer-submissions-body" class="divide-y divide-gray-200 bg-white">
                                         <tr>
-                                            <td colspan="5" class="text-center py-12 text-slate-400">
+                                            <td colspan="6" class="text-center py-12 text-slate-400">
                                                 <div class="spinner-dark mx-auto mb-3"></div>
                                                 <p class="text-sm">Loading submissions...</p>
                                             </td>
@@ -743,7 +744,7 @@
             }
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-400">
                     <iconify-icon icon="solar:inbox-linear" class="text-4xl text-gray-300 mb-2"></iconify-icon>
                     <p class="text-sm">No submissions yet. Upload your first report above.</p>
                 </td></tr>`;
@@ -771,6 +772,9 @@
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-right ${s.status === 'graded' ? 'font-semibold text-slate-900' : 'text-slate-400'}">
                         ${s.status === 'graded' ? s.score + ' / 100' : '—'}
+                    </td>
+                    <td class="px-6 py-4 text-slate-500 max-w-xs truncate" title="${escapeHtml(s.feedback || '')}">
+                        ${s.feedback ? escapeHtml(s.feedback) : '—'}
                     </td>
                 </tr>
             `).join('');
@@ -973,7 +977,7 @@
             lecturerSubmissionsCache = data || [];
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-400">
                     <iconify-icon icon="solar:inbox-linear" class="text-4xl text-gray-300 mb-2"></iconify-icon>
                     <p class="text-sm">No submissions found.</p>
                 </td></tr>`;
@@ -993,6 +997,15 @@
                         <div class="text-xs text-slate-400">${escapeHtml(studentName)}</div>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-slate-500">${escapeHtml(courseCode)}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-500">
+                        <button onclick="downloadStudentSubmission('${s.file_path}', '${escapeHtml(s.file_name)}')" 
+                            title="Download and view this report"
+                            class="hover:text-violet-600 hover:underline flex items-center gap-2 text-left font-medium transition-colors group">
+                            <iconify-icon icon="solar:document-text-linear" class="text-lg text-red-500 group-hover:scale-110 transition-transform"></iconify-icon>
+                            <span>${escapeHtml(s.file_name)}</span>
+                            <iconify-icon icon="solar:download-minimalistic-linear" class="text-sm text-slate-400 group-hover:text-violet-600"></iconify-icon>
+                        </button>
+                    </td>
                     <td class="whitespace-nowrap px-6 py-4 text-slate-500">${formatDate(s.submitted_at)}</td>
                     <td class="whitespace-nowrap px-6 py-4">
                         ${isPending
